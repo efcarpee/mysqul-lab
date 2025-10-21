@@ -1,0 +1,40 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: ghost-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: ghost
+      MYSQL_USER: ghost
+      MYSQL_PASSWORD: ghostpass
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -prootpass || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  ghost:
+    image: ghost:6-alpine
+    container_name: ghost-app
+    depends_on:
+      mysql:
+        condition: service_healthy
+    restart: unless-stopped
+    ports:
+      - "8080:2368"              # si 8080 está ocupado, cambia a "8081:2368"
+    environment:
+      url: http://localhost:8080  # si cambias el puerto, cambia aquí (ej: http://localhost:8081)
+      database__client: mysql
+      database__connection__host: mysql
+      database__connection__user: ghost
+      database__connection__password: ghostpass
+      database__connection__database: ghost
+    volumes:
+      - ghost_content:/var/lib/ghost/content
+
+volumes:
+  mysql_data:
+  ghost_content:
