@@ -1,41 +1,35 @@
-# 🐋 Docker Compose Lab — Ghost + MySQL + 🤖 OpenWebUI + Ollama  
-> *by François “Cocina” Carpe — Trinity College, Cloud-Native Computing (2025)*  
+🐋 Docker Compose Lab — Ghost + MySQL + 🤖 OpenWebUI + Ollama
 
----
+by François Carpe — Trinity College, Cloud-Native Computing (2025)
 
-## 📘 Overview
+📘 Overview
 
-This project demonstrates **multi-container orchestration** using **Docker Compose**, **persistent data storage**, and **local LLMs**.  
-You’ll deploy two independent stacks:
+This project demonstrates multi-container orchestration with Docker Compose, persistent data via volumes, and running local LLMs. It contains two independent stacks:
 
-| Part | Stack | Description |
-|------|--------|-------------|
-| 🧱 **Part 1** | Ghost + MySQL | Learn how a CMS works with a backend database and how data persists using volumes |
-| 🧠 **Part 2** | Ollama + OpenWebUI | Explore local LLM deployment with Docker and use OpenWebUI as a ChatGPT-like interface |
+Part	Stack	What you’ll learn
+🧱 Part 1	Ghost + MySQL	CMS + database, service dependencies, volumes & persistence
+🧠 Part 2	OpenWebUI + Ollama	Local LLM serving, model management, troubleshooting networking/ports
+🧰 Prerequisites
 
----
+Docker Desktop running
 
-## 🧰 Prerequisites
+Git installed
 
-- 🐳 Docker Desktop installed and running  
-- 💻 Git installed  
-- ⚙️ PowerShell or terminal access  
-- 🗂️ At least 10 GB free disk space  
-- 🌐 Internet access (for pulling images/models)  
-- 🧑‍💻 Basic terminal familiarity  
+Terminal (PowerShell on Windows)
 
----
+≥ 10 GB free disk (models + images)
 
-## ⚙️ Part 1 — Ghost + MySQL
+Internet access
 
-### Step 1: Create your workspace
-```bash
+Basic CLI familiarity
+
+⚙️ Part 1 — Ghost + MySQL
+1) Create workspace
 cd "C:\Users\<yourname>\OneDrive\Documentos\Cloud-Native"
 mkdir ghost-mysql-lab
 cd ghost-mysql-lab
-Step 2: Create the docker-compose.yaml
-yaml
-Copiar código
+
+2) Create docker-compose.yaml
 services:
   mysql:
     image: mysql:8.0
@@ -62,7 +56,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     ports:
-      - "8080:2368"
+      - "8080:2368"        # use "8081:2368" if 8080 is busy
     environment:
       url: http://localhost:8080
       database__client: mysql
@@ -76,74 +70,51 @@ services:
 volumes:
   mysql_data:
   ghost_content:
-Step 3: Build and start
-bash
-Copiar código
+
+
+If you change the host port to 8081, also change url: http://localhost:8081.
+
+3) Start services
 docker compose up -d
--d = detached mode (runs in background).
-
-The first time might take a few minutes while downloading images.
-
-Check if running:
-
-bash
-Copiar código
 docker compose ps
-Expected:
 
-bash
-Copiar código
-ghost-app     Up 10s (healthy)  0.0.0.0:8080->2368/tcp
-ghost-mysql   Up 10s (healthy)  3306/tcp
-Step 4: Open Ghost
-Visit http://localhost:8080/ghost
-Create your admin account and publish a test post.
 
-If it fails to load:
+You should see ghost-app and ghost-mysql Up with 0.0.0.0:8080->2368/tcp.
 
-bash
-Copiar código
-docker compose logs --tail=100
-docker compose restart ghost
-Step 5: Test persistence
-Stop and restart containers:
+4) Initialize Ghost
 
-bash
-Copiar código
+Open http://localhost:8080/ghost
+
+Create admin, set blog title, publish a test post
+
+5) Test persistence
 docker compose down
 docker compose up -d
-Your post and blog name should still exist ✅
 
-💾 Why Data Persists
-Your content lives inside Docker volumes:
 
-mysql_data → database tables
+Return to /ghost and confirm your user, title, and post still exist ✅
 
-ghost_content → uploads, media, themes
+🛠 Common Ghost issues
+Symptom	Cause	Fix
+Browser can’t reach site	Port 8080 in use	Change to "8081:2368" and update url
+ECONNREFUSED in ghost logs	MySQL not ready	Wait 20–30s or docker compose restart ghost
+no configuration file provided	Wrong directory	Run commands inside ghost-mysql-lab
+MySQL auth errors	Env mismatch	Ensure MySQL creds match Ghost DB env
+Stuck/DB corrupt	Dirty data	docker compose down -v (⚠️ deletes data) and rerun
+💾 Why data persists
 
-View volumes:
+mysql_data keeps database files
 
-bash
-Copiar código
-docker volume ls
-⚠️ Common Ghost Errors
-Issue	Cause	Fix
-Port conflict	8080 already in use	Change to 8081:2368
-“ECONNREFUSED”	MySQL not ready	Restart ghost or add depends_on
-“no config file provided”	Wrong directory	Run from inside ghost-mysql-lab
-MySQL access denied	Wrong env vars	Verify user/password
-Containers stuck	MySQL corruption	docker compose down -v then rebuild
+ghost_content keeps uploads/themes
+Volumes live outside containers, so data survives down/up.
 
-🤖 Part 2 — Ollama + OpenWebUI
-Step 1: Create new folder
-bash
-Copiar código
+🤖 Part 2 — OpenWebUI + Ollama
+1) Create workspace
 cd "C:\Users\<yourname>\OneDrive\Documentos\Cloud-Native"
 mkdir ollama-webui-lab
 cd ollama-webui-lab
-Step 2: Add docker-compose.yaml
-yaml
-Copiar código
+
+2) Create docker-compose.yaml
 services:
   ollama:
     image: ollama/ollama:latest
@@ -163,117 +134,111 @@ services:
     environment:
       - OLLAMA_BASE_URL=http://ollama:11434
     ports:
-      - "3001:8080"
+      - "3001:8080"        # pick 3002 if 3001 is busy
     volumes:
       - openwebui_data:/app/backend/data
 
 volumes:
   ollama_data:
   openwebui_data:
-Step 3: Start containers
-bash
-Copiar código
+
+3) Start services
 docker compose up -d
-Verify:
-
-bash
-Copiar código
 docker compose ps
-Expected:
 
-bash
-Copiar código
-open-webui   Up   0.0.0.0:3001->8080/tcp
-ollama       Up   0.0.0.0:11434->11434/tcp
-Step 4: Access interface
-Go to http://localhost:3001
-Create a local account (stored locally).
 
-Step 5: Pull a model
-Inside OpenWebUI → Settings → Models → “Pull a model”
-Enter:
+Expect open-webui at 0.0.0.0:3001->8080/tcp and ollama at 11434.
 
-makefile
-Copiar código
-llama3.2:1b
-Wait for ~1.3GB download.
+4) Access UI and create account
 
-If canceled:
+Open http://localhost:3001
 
-bash
-Copiar código
+Create a local admin account (stored locally only)
+
+5) Pull a model
+
+Via UI: Settings → Models → “Pull a model” → llama3.2:1b → Download (~1.3 GB)
+
+If UI fails (download canceled), use CLI:
+
 docker exec -it ollama ollama pull llama3.2:1b
-If DNS errors appear:
-Add inside ollama: block:
+docker exec -it ollama ollama list   # confirm model presence
 
-yaml
-Copiar código
+
+If DNS errors: add to ollama service
+
 dns:
   - 8.8.8.8
   - 1.1.1.1
-Then rebuild:
 
-bash
-Copiar código
+
+Then:
+
 docker compose down
 docker compose up -d
-Step 6: Chat with your model
-Back to main UI → select llama3.2:1b.
-Try asking:
 
-Explain Docker Compose in simple terms.
-Write a Python “Hello World” script.
+6) Chat!
 
-You now have a local ChatGPT running on Docker 🧠🔥
+Reload the page → select llama3.2:1b (top bar) → start chatting:
 
-⚠️ Common Ollama Errors
-Problem	Fix
-Port 3000 busy	Change to 3002:8080
-Download canceled	Run manual pull
-DNS failure	Add Google DNS 8.8.8.8
-Out of space	docker system prune -a
-Container restarts	Allocate more RAM (6–8GB)
+“Explain Docker Compose in simple terms.”
+
+“Write a Python ‘Hello World’.”
+
+🛠 Common OpenWebUI/Ollama issues
+Symptom	Cause	Fix
+Bind for 0.0.0.0:3000 failed	Port in use	Use "3001:8080" or "3002:8080"
+Download canceled	Network/DNS	Use CLI pull; add dns:; check firewall/proxy
+Name resolution failure	DNS	Add dns: 8.8.8.8, 1.1.1.1
+No space left	Disk full	docker system prune -a (⚠️ removes unused images)
+Container restarts	Low RAM	Increase Docker memory (6–8 GB recommended)
+📸 Screenshots to include
+
+Ghost blog with custom title
+
+Docker Desktop showing ghost-app and ghost-mysql running
+
+OpenWebUI chat with 2–3 exchanges
+
+Docker Desktop showing open-webui and ollama running
+
+Suggested structure:
+
+ghost-mysql-lab/
+  docker-compose.yaml
+  README.md
+  screenshots/
+    ghost_blog.png
+    docker_ghost_mysql.png
+
+ollama-webui-lab/
+  docker-compose.yaml
+  README.md
+  screenshots/
+    openwebui_chat.png
+    docker_openwebui_ollama.png
+
+🧩 Reflection (sample answers)
+
+What does -d do? Runs containers in detached mode (background).
+
+Why does Ghost data persist? Named volumes (mysql_data, ghost_content) live outside containers.
+
+Resource usage: run docker system df and report Images and Volumes space used.
+
+Similarities: both stacks use multiple services, port mappings, and volumes.
+
+Differences: Ghost ↔ MySQL (DB); OpenWebUI ↔ Ollama (LLM serving).
+
+When to prefer local LLMs: privacy, offline use, predictable costs, low latency demos.
 
 🧹 Cleanup
-bash
-Copiar código
-docker compose down             # Stop and remove containers
-docker compose down -v          # Also remove volumes
-docker system prune -a          # Clean images and cache
-📸 Screenshots to Submit
-Section	Description
-📰 Ghost Blog	
-🐳 Docker Desktop (Ghost + MySQL)	
-🤖 OpenWebUI Chat	
-🐋 Docker Desktop (Ollama + WebUI)	
+# Stop & remove containers
+docker compose down
 
-🧩 Reflection Questions
-1️⃣ What does -d do?
-Runs containers in detached (background) mode.
+# Also remove volumes (⚠️ deletes data/models)
+docker compose down -v
 
-2️⃣ Why does data persist?
-Docker volumes (mysql_data, ghost_content) store data outside container lifecycle.
+# Remove unused images & cache
+docker system prune -a
 
-3️⃣ Check resource usage:
-
-bash
-Copiar código
-docker system df
-4️⃣ Similarities:
-Both YAML files use services, ports, volumes, and depends_on.
-
-5️⃣ Differences:
-
-Ghost uses MySQL (database app)
-
-OpenWebUI uses Ollama (AI inference service)
-
-6️⃣ Why run LLMs locally?
-
-🔒 Privacy
-
-💸 No API fees
-
-⚡ Fast response
-
-🌐 Works offline
