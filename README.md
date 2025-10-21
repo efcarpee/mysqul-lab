@@ -232,13 +232,5 @@ Differences: Ghost ↔ MySQL (DB); OpenWebUI ↔ Ollama (LLM serving).
 
 When to prefer local LLMs: privacy, offline use, predictable costs, low latency demos.
 
-🧹 Cleanup
-# Stop & remove containers
-docker compose down
 
-# Also remove volumes (⚠️ deletes data/models)
-docker compose down -v
-
-# Remove unused images & cache
-docker system prune -a
 
